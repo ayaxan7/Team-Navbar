@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>World Map Clock with Alarm and Stopwatch</title>
+  <title>World Map Clock with Alarm, Stopwatch, and Timer</title>
 
   <!-- Include Leaflet CSS for OpenStreetMap -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
@@ -17,7 +18,8 @@
       justify-content: center;
       align-items: center;
       height: 100vh;
-      background-color: #2c2c2c; /* Dark background */
+      background-color: #2c2c2c;
+      /* Dark background */
       color: #e5e5e5;
       margin: 0;
     }
@@ -32,7 +34,8 @@
 
     .clock {
       font-size: 48px;
-      color: #7FFF00; /* Green shade for time */
+      color: #7FFF00;
+      /* Green shade for time */
       margin-bottom: 20px;
     }
 
@@ -42,7 +45,8 @@
       margin-bottom: 20px;
     }
 
-    select, input {
+    select,
+    input {
       padding: 10px;
       font-size: 16px;
       border-radius: 5px;
@@ -99,25 +103,29 @@
       margin-top: 20px;
     }
 
-    .lap-times {
-      margin-top: 20px;
-      text-align: left;
+    /* Timer styling */
+    .timer {
+      font-size: 24px;
+      margin: 20px 0;
     }
 
-    .lap {
-      padding: 5px 0;
-      border-bottom: 1px solid #666;
+    .quote {
+      font-size: 20px;
+      color: #FFD700; /* Golden color for quotes */
+      margin-top: 20px;
     }
   </style>
 </head>
+
 <body>
 
   <div class="container">
     <div class="tabs">
-      <div class="tab active" id="homepageTab" onclick="showTab('homepage')">Home Clock</div>
+      <div class="tab active" id="homepageTab" onclick="showTab('homepage')">Homepage Clock</div>
       <div class="tab" id="worldClockTab" onclick="showTab('worldClock')">World Clock</div>
       <div class="tab" id="alarmTab" onclick="showTab('alarm')">Alarm</div>
       <div class="tab" id="stopwatchTab" onclick="showTab('stopwatch')">Stopwatch</div>
+      <div class="tab" id="timerTab" onclick="showTab('timer')">Timer</div>
     </div>
 
     <!-- Homepage Clock Tab -->
@@ -145,98 +153,131 @@
     <!-- Stopwatch Tab -->
     <div class="tab-content" id="stopwatchContent">
       <h2>Stopwatch</h2>
-      <div class="clock" id="stopwatch">00:00:00.000</div>
+      <div class="clock" id="stopwatch">00:00:000</div>
       <button onclick="startStopwatch()">Start</button>
       <button onclick="stopStopwatch()">Stop</button>
       <button onclick="resetStopwatch()">Reset</button>
-      <button onclick="lapStopwatch()">Lap</button>
-      <div class="lap-times" id="lapTimes"></div>
+    </div>
+
+    <!-- Timer Tab -->
+    <div class="tab-content" id="timerContent">
+      <h2>Timer</h2>
+      <input type="number" id="timerInput" placeholder="Enter seconds" />
+      <button onclick="startTimer()">Start Timer</button>
+      <div class="timer" id="timerDisplay">00:00</div>
+      <p id="timerMessage"></p>
+      <div class="quote" id="motivationalQuote"></div>
     </div>
   </div>
 
   <script>
+    // Array of motivational quotes
+    const quotes = [
+      "Believe you can and you're halfway there. - Theodore Roosevelt",
+      "Success is not the key to happiness. Happiness is the key to success. - Albert Schweitzer",
+      "Don't watch the clock; do what it does. Keep going. - Sam Levenson",
+      "The future belongs to those who believe in the beauty of their dreams. - Eleanor Roosevelt",
+      "What lies behind us and what lies before us are tiny matters compared to what lies within us. - Ralph Waldo Emerson",
+      "You are never too old to set another goal or to dream a new dream. - C.S. Lewis",
+      "Act as if what you do makes a difference. It does. - William James",
+      "Success usually comes to those who are too busy to be looking for it. - Henry David Thoreau",
+      "Opportunities don't happen. You create them. - Chris Grosser",
+      "It does not matter how slowly you go as long as you do not stop. - Confucius",
+    ];
+
+    // Function to get a random quote
+    function getRandomQuote() {
+      const randomIndex = Math.floor(Math.random() * quotes.length);
+      return quotes[randomIndex];
+    }
+
     // Homepage Clock (IST)
     function updateHomepageClock() {
       const now = new Date();
       const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
       const istTime = now.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata' });
       const istDate = now.toLocaleDateString('en-IN', options);
-      
+
       document.getElementById('homepageClock').textContent = istTime;
       document.getElementById('homepageDate').textContent = istDate;
     }
     setInterval(updateHomepageClock, 1000);
-  
+
     // Initialize Map for World Clock
     var map = L.map('map').setView([20.5937, 78.9629], 2); // Focused on India by default
-  
+
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 18,
       minZoom: 2, // Setting min zoom level for better user experience
     }).addTo(map);
-  
-    // Get time from WorldTimeAPI based on coordinates for World Clock
-    map.on('click', function(e) {
-        var lat = e.latlng.lat;
-        var lng = e.latlng.lng;
-    
-        // Fetch time from your server using the /time route
-        fetch(`https://map-api-0ovh.onrender.com/time?lat=${lat}&lng=${lng}`)
-            .then(response => {
-                // Check if the response is okay (status code 200)
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data && data.time) {
-                    // Update the UI with the fetched time and date
-                    document.getElementById('worldClock').textContent = `Time: ${data.time}, Date: ${data.date}, Timezone: ${data.timezone}`;
-                } else {
-                    document.getElementById('worldClock').textContent = 'Time not available';
-                }
-            })
-            .catch(error => {
-                document.getElementById('worldClock').textContent = 'Error fetching time';
-                console.error("Error fetching time:", error);
-            });
-    });
-    
 
-    
-    // Alarm Feature
+    // Get time from WorldTimeAPI based on coordinates for World Clock
+    map.on('click', function (e) {
+      var lat = e.latlng.lat;
+      var lng = e.latlng.lng;
+
+      // Fetch the appropriate time based on lat, lng from the new API
+      fetch(`https://worldtimeapi.org/api/timezone/Etc/GMT${lat > 0 ? '-' : '+'}${Math.abs(Math.round(lng / 15))}`)
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Network response was not ok ' + response.statusText);
+          }
+          return response.json();
+        })
+        .then(data => {
+          // Assuming the new API returns a "datetime" field in the response JSON
+          const dateTime = new Date(data.datetime);
+          document.getElementById('worldClock').textContent = dateTime.toLocaleTimeString();
+        })
+        .catch(error => {
+          document.getElementById('worldClock').textContent = 'Time not available';
+          console.log("Error fetching time:", error);
+        });
+
+      // Optionally zoom in to the clicked location
+      map.setView(e.latlng, 8);
+    });
+
+    // Alarm functionality
     let alarmTimeout = null;
     function setAlarm() {
       const alarmTime = document.getElementById('alarmTime').value;
-      document.getElementById('alarmMessage').textContent = `Alarm set for ${alarmTime}`;
-      
-      const now = new Date();
-      const alarmDate = new Date(`${now.toDateString()} ${alarmTime}`);
-      const alarmUnixTimestamp = Math.floor(alarmDate.getTime() / 1000); // Convert to Unix timestamp
-      
-      const timeToAlarm = alarmDate - now; // Time difference in milliseconds
-      
-      if (timeToAlarm >= 0) {
-        alarmTimeout = setTimeout(() => {
-          alert("Time's up!");
-          document.getElementById('alarmMessage').textContent = "";
-        }, timeToAlarm);
+      if (!alarmTime) {
+        alert('Please select a time for the alarm.');
+        return;
       }
+
+      const alarmDate = new Date();
+      const [hours, minutes] = alarmTime.split(':');
+      alarmDate.setHours(hours);
+      alarmDate.setMinutes(minutes);
+      alarmDate.setSeconds(0);
+
+      const now = new Date();
+      const timeToAlarm = alarmDate.getTime() - now.getTime();
+      if (timeToAlarm < 0) {
+        alert('Please select a time in the future.');
+        return;
+      }
+
+      alarmTimeout = setTimeout(() => {
+        alert('Alarm ringing!');
+        document.getElementById('alarmMessage').textContent = 'Alarm ringing!';
+      }, timeToAlarm);
+
+      document.getElementById('alarmMessage').textContent = `Alarm set for ${alarmDate.toLocaleTimeString()}`;
     }
-  
-    // Stopwatch Feature with Milliseconds
+
+    // Stopwatch functionality
+    let stopwatchTime = 0;
     let stopwatchInterval = null;
-    let stopwatchTime = 0; // Time in milliseconds
-    const lapTimes = []; // Array to store lap times
 
     function startStopwatch() {
       if (!stopwatchInterval) {
-        // Update every 10 milliseconds
         stopwatchInterval = setInterval(() => {
-          stopwatchTime += 10; // Increase time by 10 milliseconds
+          stopwatchTime += 100;
           document.getElementById('stopwatch').textContent = formatTime(stopwatchTime);
-        }, 10); // Run every 10 milliseconds
+        }, 100);
       }
     }
 
@@ -248,57 +289,65 @@
     function resetStopwatch() {
       stopStopwatch();
       stopwatchTime = 0;
-      document.getElementById('stopwatch').textContent = '00:00:00.000';
-      document.getElementById('lapTimes').innerHTML = ''; // Clear lap times
-      lapTimes.length = 0; // Clear the lap times array
+      document.getElementById('stopwatch').textContent = formatTime(stopwatchTime);
     }
 
-    function lapStopwatch() {
-      lapTimes.push(stopwatchTime); // Add current time to laps
-      displayLapTimes(); // Update the lap display
+    function formatTime(timeInMilliseconds) {
+      const totalSeconds = Math.floor(timeInMilliseconds / 1000);
+      const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
+      const seconds = String(totalSeconds % 60).padStart(2, '0');
+      const milliseconds = String(timeInMilliseconds % 1000).padStart(3, '0');
+      return `${minutes}:${seconds}:${milliseconds}`;
     }
 
-    function displayLapTimes() {
-      const lapTimesContainer = document.getElementById('lapTimes');
-      lapTimesContainer.innerHTML = ''; // Clear current laps
-      
-      lapTimes.forEach((lapTime, index) => {
-        const lapDiv = document.createElement('div');
-        lapDiv.classList.add('lap');
-        lapDiv.textContent = `Lap ${index + 1}: ${formatTime(lapTime)}`;
-        lapTimesContainer.appendChild(lapDiv);
-      });
+    // Timer Feature
+    let timerInterval = null;
+    function startTimer() {
+      const timerInput = document.getElementById('timerInput').value;
+      const timerSeconds = parseInt(timerInput, 10);
+      if (isNaN(timerSeconds) || timerSeconds <= 0) {
+        alert('Please enter a valid number of seconds.');
+        return;
+      }
+      let timeLeft = timerSeconds;
+      document.getElementById('timerMessage').textContent = '';
+
+      if (timerInterval) clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        const minutes = String(Math.floor(timeLeft / 60)).padStart(2, '0');
+        const seconds = String(timeLeft % 60).padStart(2, '0');
+        document.getElementById('timerDisplay').textContent = `${minutes}:${seconds}`;
+
+        if (timeLeft <= 0) {
+          clearInterval(timerInterval);
+          document.getElementById('timerMessage').textContent = "Time's up!";
+          document.getElementById('timerDisplay').textContent = '00:00';
+          alert("Time's up!");
+        }
+        timeLeft--;
+      }, 1000);
     }
 
-    function formatTime(time) {
-      const milliseconds = Math.floor((time % 1000) / 10);
-      const seconds = Math.floor((time / 1000) % 60);
-      const minutes = Math.floor((time / 60000) % 60);
-      const hours = Math.floor((time / 3600000) % 24);
-
-      return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}.${pad(milliseconds, 3)}`;
-    }
-
-    function pad(num, size = 2) {
-      let s = "0" + num;
-      return s.substr(s.length - size);
-    }
-
-    // Function to switch between tabs
+    // Tab functionality
     function showTab(tabName) {
-      const tabs = document.querySelectorAll('.tab-content');
-      const tabLinks = document.querySelectorAll('.tab');
-
+      const tabContents = document.querySelectorAll('.tab-content');
+      const tabs = document.querySelectorAll('.tab');
+      tabContents.forEach(content => {
+        content.classList.remove('active');
+      });
       tabs.forEach(tab => {
         tab.classList.remove('active');
-      });
-      tabLinks.forEach(tabLink => {
-        tabLink.classList.remove('active');
       });
 
       document.getElementById(tabName + 'Content').classList.add('active');
       document.getElementById(tabName + 'Tab').classList.add('active');
+
+      // Update the quote when the Timer tab is shown
+      if (tabName === 'timer') {
+        document.getElementById('motivationalQuote').textContent = getRandomQuote();
+      }
     }
   </script>
 </body>
+
 </html>
