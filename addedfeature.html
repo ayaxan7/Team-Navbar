@@ -7,9 +7,8 @@
 
   <!-- Include Leaflet CSS for OpenStreetMap -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
 
-  
   <!-- Custom CSS -->
   <style>
     body {
@@ -100,13 +99,22 @@
       margin-top: 20px;
     }
 
+    .lap-times {
+      margin-top: 20px;
+      text-align: left;
+    }
+
+    .lap {
+      padding: 5px 0;
+      border-bottom: 1px solid #666;
+    }
   </style>
 </head>
 <body>
 
   <div class="container">
     <div class="tabs">
-      <div class="tab active" id="homepageTab" onclick="showTab('homepage')">Homepage Clock</div>
+      <div class="tab active" id="homepageTab" onclick="showTab('homepage')">Home Clock</div>
       <div class="tab" id="worldClockTab" onclick="showTab('worldClock')">World Clock</div>
       <div class="tab" id="alarmTab" onclick="showTab('alarm')">Alarm</div>
       <div class="tab" id="stopwatchTab" onclick="showTab('stopwatch')">Stopwatch</div>
@@ -137,10 +145,12 @@
     <!-- Stopwatch Tab -->
     <div class="tab-content" id="stopwatchContent">
       <h2>Stopwatch</h2>
-      <div class="clock" id="stopwatch">00:00:00000</div>
+      <div class="clock" id="stopwatch">00:00:00.000</div>
       <button onclick="startStopwatch()">Start</button>
       <button onclick="stopStopwatch()">Stop</button>
       <button onclick="resetStopwatch()">Reset</button>
+      <button onclick="lapStopwatch()">Lap</button>
+      <div class="lap-times" id="lapTimes"></div>
     </div>
   </div>
 
@@ -167,25 +177,34 @@
   
     // Get time from WorldTimeAPI based on coordinates for World Clock
     map.on('click', function(e) {
-      var lat = e.latlng.lat;
-      var lng = e.latlng.lng;
-  
-      // Fetch the appropriate timezone based on lat, lng
-      fetch(`http://api.timezonedb.com/v2.1/get-time-zone?key=YOUR_API_KEY&format=json&by=position&lat=${lat}&lng=${lng}`)
-        .then(response => response.json())
-        .then(data => {
-          const dateTime = new Date(data.formatted);
-          document.getElementById('worldClock').textContent = dateTime.toLocaleTimeString();
-        })
-        .catch(error => {
-          document.getElementById('worldClock').textContent = 'Time not available';
-          console.log("Error fetching time:", error);
-        });
-  
-      // Optionally zoom in to the clicked location
-      map.setView([lat, lng], 10); // Zoom to level 10 after clicking on the map
+        var lat = e.latlng.lat;
+        var lng = e.latlng.lng;
+    
+        // Fetch time from your server using the /time route
+        fetch(`https://map-api-0ovh.onrender.com/time?lat=${lat}&lng=${lng}`)
+            .then(response => {
+                // Check if the response is okay (status code 200)
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data && data.time) {
+                    // Update the UI with the fetched time and date
+                    document.getElementById('worldClock').textContent = `Time: ${data.time}, Date: ${data.date}, Timezone: ${data.timezone}`;
+                } else {
+                    document.getElementById('worldClock').textContent = 'Time not available';
+                }
+            })
+            .catch(error => {
+                document.getElementById('worldClock').textContent = 'Error fetching time';
+                console.error("Error fetching time:", error);
+            });
     });
-  
+    
+
+    
     // Alarm Feature
     let alarmTimeout = null;
     function setAlarm() {
@@ -194,7 +213,9 @@
       
       const now = new Date();
       const alarmDate = new Date(`${now.toDateString()} ${alarmTime}`);
-      const timeToAlarm = alarmDate - now;
+      const alarmUnixTimestamp = Math.floor(alarmDate.getTime() / 1000); // Convert to Unix timestamp
+      
+      const timeToAlarm = alarmDate - now; // Time difference in milliseconds
       
       if (timeToAlarm >= 0) {
         alarmTimeout = setTimeout(() => {
@@ -204,50 +225,80 @@
       }
     }
   
-   // Stopwatch Feature with Milliseconds
-let stopwatchInterval = null;
-let stopwatchTime = 0; // Time in milliseconds
+    // Stopwatch Feature with Milliseconds
+    let stopwatchInterval = null;
+    let stopwatchTime = 0; // Time in milliseconds
+    const lapTimes = []; // Array to store lap times
 
-function startStopwatch() {
-  if (!stopwatchInterval) {
-    // Update every 10 milliseconds
-    stopwatchInterval = setInterval(() => {
-      stopwatchTime += 10; // Increase time by 10 milliseconds
-      document.getElementById('stopwatch').textContent = formatTime(stopwatchTime);
-    }, 10); // Run every 10 milliseconds
-  }
-}
+    function startStopwatch() {
+      if (!stopwatchInterval) {
+        // Update every 10 milliseconds
+        stopwatchInterval = setInterval(() => {
+          stopwatchTime += 10; // Increase time by 10 milliseconds
+          document.getElementById('stopwatch').textContent = formatTime(stopwatchTime);
+        }, 10); // Run every 10 milliseconds
+      }
+    }
 
-function stopStopwatch() {
-  clearInterval(stopwatchInterval);
-  stopwatchInterval = null;
-}
+    function stopStopwatch() {
+      clearInterval(stopwatchInterval);
+      stopwatchInterval = null;
+    }
 
-function resetStopwatch() {
-  stopStopwatch();
-  stopwatchTime = 0;
-  document.getElementById('stopwatch').textContent = "00:00:00.000"; // Reset display to 0
-}
+    function resetStopwatch() {
+      stopStopwatch();
+      stopwatchTime = 0;
+      document.getElementById('stopwatch').textContent = '00:00:00.000';
+      document.getElementById('lapTimes').innerHTML = ''; // Clear lap times
+      lapTimes.length = 0; // Clear the lap times array
+    }
 
-// Format time to include hours, minutes, seconds, and milliseconds
-function formatTime(timeInMs) {
-  const hrs = Math.floor(timeInMs / 3600000); // 1 hr = 3600000 ms
-  const mins = Math.floor((timeInMs % 3600000) / 60000); // 1 min = 60000 ms
-  const secs = Math.floor((timeInMs % 60000) / 1000); // 1 sec = 1000 ms
-  const ms = timeInMs % 1000; // Remaining milliseconds
-  return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${ms.toString().padStart(3, '0')}`; // Format to include milliseconds
-}
+    function lapStopwatch() {
+      lapTimes.push(stopwatchTime); // Add current time to laps
+      displayLapTimes(); // Update the lap display
+    }
 
-  
-    // Tab Switching
-    function showTab(tab) {
-      document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-      document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
-  
-      document.getElementById(`${tab}Content`).classList.add('active');
-      document.getElementById(`${tab}Tab`).classList.add('active');
+    function displayLapTimes() {
+      const lapTimesContainer = document.getElementById('lapTimes');
+      lapTimesContainer.innerHTML = ''; // Clear current laps
+      
+      lapTimes.forEach((lapTime, index) => {
+        const lapDiv = document.createElement('div');
+        lapDiv.classList.add('lap');
+        lapDiv.textContent = `Lap ${index + 1}: ${formatTime(lapTime)}`;
+        lapTimesContainer.appendChild(lapDiv);
+      });
+    }
+
+    function formatTime(time) {
+      const milliseconds = Math.floor((time % 1000) / 10);
+      const seconds = Math.floor((time / 1000) % 60);
+      const minutes = Math.floor((time / 60000) % 60);
+      const hours = Math.floor((time / 3600000) % 24);
+
+      return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}.${pad(milliseconds, 3)}`;
+    }
+
+    function pad(num, size = 2) {
+      let s = "0" + num;
+      return s.substr(s.length - size);
+    }
+
+    // Function to switch between tabs
+    function showTab(tabName) {
+      const tabs = document.querySelectorAll('.tab-content');
+      const tabLinks = document.querySelectorAll('.tab');
+
+      tabs.forEach(tab => {
+        tab.classList.remove('active');
+      });
+      tabLinks.forEach(tabLink => {
+        tabLink.classList.remove('active');
+      });
+
+      document.getElementById(tabName + 'Content').classList.add('active');
+      document.getElementById(tabName + 'Tab').classList.add('active');
     }
   </script>
-  
 </body>
 </html>
