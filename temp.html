@@ -5,11 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>World Map Clock with Alarm and Stopwatch</title>
 
-  <!-- Include Leaflet CSS for OpenStreetMap -->
+  <!-- Include Leaflet CSS and JavaScript for OpenStreetMap -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
 
-  
   <!-- Custom CSS -->
   <style>
     body {
@@ -29,6 +28,7 @@
       border-radius: 10px;
       background-color: #3e3e3e;
       box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.4);
+      width: 80%;
     }
 
     .clock {
@@ -137,7 +137,7 @@
     <!-- Stopwatch Tab -->
     <div class="tab-content" id="stopwatchContent">
       <h2>Stopwatch</h2>
-      <div class="clock" id="stopwatch">00:00:00000</div>
+      <div class="clock" id="stopwatch">00:00:00</div>
       <button onclick="startStopwatch()">Start</button>
       <button onclick="stopStopwatch()">Stop</button>
       <button onclick="resetStopwatch()">Reset</button>
@@ -204,40 +204,36 @@
       }
     }
   
-   // Stopwatch Feature with Milliseconds
-let stopwatchInterval = null;
-let stopwatchTime = 0; // Time in milliseconds
-
-function startStopwatch() {
-  if (!stopwatchInterval) {
-    // Update every 10 milliseconds
-    stopwatchInterval = setInterval(() => {
-      stopwatchTime += 10; // Increase time by 10 milliseconds
-      document.getElementById('stopwatch').textContent = formatTime(stopwatchTime);
-    }, 10); // Run every 10 milliseconds
-  }
-}
-
-function stopStopwatch() {
-  clearInterval(stopwatchInterval);
-  stopwatchInterval = null;
-}
-
-function resetStopwatch() {
-  stopStopwatch();
-  stopwatchTime = 0;
-  document.getElementById('stopwatch').textContent = "00:00:00.000"; // Reset display to 0
-}
-
-// Format time to include hours, minutes, seconds, and milliseconds
-function formatTime(timeInMs) {
-  const hrs = Math.floor(timeInMs / 3600000); // 1 hr = 3600000 ms
-  const mins = Math.floor((timeInMs % 3600000) / 60000); // 1 min = 60000 ms
-  const secs = Math.floor((timeInMs % 60000) / 1000); // 1 sec = 1000 ms
-  const ms = timeInMs % 1000; // Remaining milliseconds
-  return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${ms.toString().padStart(3, '0')}`; // Format to include milliseconds
-}
-
+    // Stopwatch Feature
+    let stopwatchInterval = null;
+    let stopwatchTime = 0;
+  
+    function startStopwatch() {
+      if (!stopwatchInterval) {
+        stopwatchInterval = setInterval(() => {
+          stopwatchTime++;
+          document.getElementById('stopwatch').textContent = formatTime(stopwatchTime);
+        }, 1000);
+      }
+    }
+  
+    function stopStopwatch() {
+      clearInterval(stopwatchInterval);
+      stopwatchInterval = null;
+    }
+  
+    function resetStopwatch() {
+      stopStopwatch();
+      stopwatchTime = 0;
+      document.getElementById('stopwatch').textContent = "00:00:00";
+    }
+  
+    function formatTime(seconds) {
+      const hrs = Math.floor(seconds / 3600);
+      const mins = Math.floor((seconds % 3600) / 60);
+      const secs = seconds % 60;
+      return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
   
     // Tab Switching
     function showTab(tab) {
@@ -250,4 +246,4 @@ function formatTime(timeInMs) {
   </script>
   
 </body>
-</html>
+</
